@@ -9,12 +9,12 @@ Adafruit_DCMotor *RightMotor = AFMS.getMotor(1);
 Adafruit_DCMotor *LeftMotor = AFMS.getMotor(2);
 
 // SENSOR PINS
-const byte RIGHT_SENSOR = A0;
-const byte LEFT_SENSOR = A1;
+const byte RIGHT_SENSOR_PIN = A0;
+const byte LEFT_SENSOR_PIN = A1;
 
 // PID VARIABLES
 int set_point;
-int current_value;
+int current_value = 0;
 int error = 0;
 int prev_error = 0;
 
@@ -26,17 +26,31 @@ float PID;
 
 // ROBOT STATES
 bool track_end = false;
+int datacount = 0;
+int right_speed = 150;
+int left_speed = 150;
+int right_sensor = 0;
+int left_sensor = 0;
+
+// TABLE VARIABLE
+import processing.serial.*;
+Serial mySerial;
+Table table;
 
 void setup() {
   Serial.begin(9600);
   AFMS.begin();
 
 // BEGIN RUNNING BOTH MOTORS
-  set_motor_speeds(150, 150);
+  set_motor_speeds();
 }
 
 // calculates PID and error
 void loop() {
+
+  ++datacount;
+
+  //TODO: READ CURRENT_VALUE
   
 // stop running if at track end
   track_end = check_sensors();
@@ -46,9 +60,10 @@ void loop() {
   PID = (int) calculate_PID(error);
   prev_error = error;
   error = adjust_motors(PID);
+  send_data(datacount);
 }
 
-void set_motor_speeds(int right_speed, int left_speed) {
+void set_motor_speeds() {
   RightMotor->setSpeed(right_speed);
   RightMotor->run(FORWARD);
   RightMotor->run(RELEASE);
@@ -77,9 +92,19 @@ float calculate_PID(error) {
 float adjust_motors(PID) {
   
   // add PID to one motor and subtract from the other
-  set_motor_speeds(current_value + PID, current_value - PID);
+  right_speed = right_speed + PID;
+  left_speed = left_speed - PID;
 
   // return the error
   return set_point - current_value;
 }
 
+// use processing to update k values
+void edit_constants(){
+  // TODO: USE PROCESSING TO EDIT K VALUES
+}
+
+// send data to matlab
+void send_data(datacount) {
+  Serial.println(String(datacount) + String(",") + String(k_p) + String(",") + String(k_i) + String(",") + String(k_d) + String(",") + String(left_sensor) + String(",") + String(right_sensor) + String(",") + String(left_motor) + String(",") + String(right_sensor));  // send average reading to matlab
+}

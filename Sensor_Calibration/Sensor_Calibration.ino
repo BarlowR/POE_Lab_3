@@ -90,6 +90,7 @@ bool getData(){
 
     sensor_value = (sensor1+sensor2)/8;
     EEPROM.write(address, sensor_value);
+    Serial.print(sensor_value);
     return true;
   }
 }

@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <EEPROM.h>
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 
@@ -13,56 +14,65 @@ const byte RIGHT_SENSOR_PIN = A0;
 const byte LEFT_SENSOR_PIN = A1;
 
 // PID VARIABLES
-int set_point;
+int set_point = 0;
 int current_value = 0;
 int error = 0;
 int prev_error = 0;
+int threshold = 0;
 
 // PID CONSTANTS
 float k_p;
 float k_i;
 float k_d;
-float PID;
+int PID;
 
 // ROBOT STATES
-bool track_end = false;
 int datacount = 0;
 int right_speed = 150;
 int left_speed = 150;
-int right_sensor = 0;
-int left_sensor = 0;
+bool right_sensor = 0;
+bool left_sensor = 0;
 
-// TABLE VARIABLE
-import processing.serial.*;
-Serial mySerial;
-Table table;
 
 void setup() {
   Serial.begin(9600);
   AFMS.begin();
+  
+  pinMode(RIGHT_SENSOR_PIN, INPUT);
+  pinMode(LEFT_SENSOR_PIN, INPUT);
+  
+  
+// RETRIEVE THRESHOLD CALCULATION FROM EEPROM
+  threshold = EEPROM.get(0, threshold);
 
 // BEGIN RUNNING BOTH MOTORS
   set_motor_speeds();
 }
 
-// calculates PID and error
+// MAIN LOOP
 void loop() {
 
+// INCREASE COUNT FOR MATLAB USE
   ++datacount;
-
-  //TODO: READ CURRENT_VALUE
   
-// stop running if at track end
-  track_end = check_sensors();
-  while (track_end) {
+// CHECK FOR LEFT, RIGHT, MIDDLE, OR END OF TRACK
+  error = check_sensors();
+
+// STOP IF CHECK_SENSORS RETURNS 2 (END OF TRACK)
+  while (error == 2) {
+    error = check_sensors();
   }
 
-  PID = (int) calculate_PID(error);
+// CALCULATE PID, ADJUST MOTORS, AND REPORT DATA TO MATLAB
+  calculate_PID();
+  adjust_motors();
+  send_to_matlab();
+
+// CURRENT ERROR BECOMES PREVIOUS ERROR FOR DERIVATIVE CALC
   prev_error = error;
-  error = adjust_motors(PID);
-  send_data(datacount);
 }
 
+// GIVEN CURRENT MOTOR SPEED VALUES, ADJUST MOTORS
 void set_motor_speeds() {
   RightMotor->setSpeed(right_speed);
   RightMotor->run(FORWARD);
@@ -73,38 +83,36 @@ void set_motor_speeds() {
   LeftMotor->run(RELEASE);   
 }
 
-bool check_sensors() {
-// says whether robot is at track end or not
-  return track_end
+// RETURNS THE FOLLOWING: RIGHT OF LINE = -1, LEFT OF LINE = 1, ON LINE = 0, END OF TRACK = 2
+int check_sensors() {
+  left_sensor = analogRead(LEFT_SENSOR_PIN) > threshold;
+  right_sensor = analogRead(RIGHT_SENSOR_PIN) > threshold;
+
+// IF BOTH SENSORS ARE ABOVE THRESHOLD, BOTH ARE ON BLACK LINE (SIGNIFIES END OF TRACK)
+  if (left_sensor && right_sensor) {
+    return 2;
+  }
+  
+  return left_sensor - right_sensor;
 }
 
-// calculate and return the PID
-float calculate_PID(error) {
+// CALCULATE PID VALUE TO ADD AND SUBTRACT TO MOTORS
+float calculate_PID() {
   
-  p = error;
-  i = i + error;
-  d = error - prev_error
+  int p = error;
+  int i = i + error;
+  int d = error - prev_error;
 
-  return k_p*p + k_i*i + k_d*d;
+  PID = k_p*p + k_i*i + k_d*d;
 }
 
-// returns error and changes motor speed according to PID
-float adjust_motors(PID) {
-  
-  // add PID to one motor and subtract from the other
+// CHANGE MOTORS BY PID
+float adjust_motors() {
   right_speed = right_speed + PID;
   left_speed = left_speed - PID;
-
-  // return the error
-  return set_point - current_value;
 }
 
-// use processing to update k values
-void edit_constants(){
-  // TODO: USE PROCESSING TO EDIT K VALUES
-}
-
-// send data to matlab
-void send_data(datacount) {
-  Serial.println(String(datacount) + String(",") + String(k_p) + String(",") + String(k_i) + String(",") + String(k_d) + String(",") + String(left_sensor) + String(",") + String(right_sensor) + String(",") + String(left_motor) + String(",") + String(right_sensor));  // send average reading to matlab
+// SEND ALL DATA TO MATLAB
+void send_to_matlab() {
+  Serial.println(String(datacount) + String(",") + String(k_p) + String(",") + String(k_i) + String(",") + String(k_d) + String(",") + String(left_sensor) + String(",") + String(right_sensor) + String(",") + String(left_speed) + String(",") + String(right_speed));  // send average reading to matlab
 }

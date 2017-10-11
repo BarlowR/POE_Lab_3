@@ -6,15 +6,11 @@
 
 
 
-byte sensorValue; 
+byte sensor_value; 
 
-<<<<<<< HEAD
-const int dataLength = 50;
-=======
 const int dataLength = 400;
->>>>>>> b52775bd8c9caf03a0b5b0ede1af6b65d2d111b6
 
-byte sensor_data[2][dataLength];
+int sensor_data[2][dataLength];
 int dataIndex = 0; 
 
 const byte STATUS_LED = 13;
@@ -22,7 +18,6 @@ const byte STATUS_LED = 13;
 unsigned long initialTime;
 
 byte address = 0;
-int vals = 1;
 
 boolean done = false; 
 
@@ -36,7 +31,6 @@ void setup() {
  Serial.begin(9600);
 
  initialTime = millis();
- Serial.begin( 9600 );
 }
 
 void loop() {
@@ -56,8 +50,6 @@ void loop() {
   }
   //Turn LED on to indicate finish
   else {
-    EEPROM.get(address, vals);
-    Serial.println(vals);    
     digitalWrite(STATUS_LED, HIGH);
   }
 }
@@ -96,13 +88,8 @@ bool getData(){
     }
     int sensor2 = sum/dataLength;    
 
-<<<<<<< HEAD
-    sensorValue = (sensor1+sensor2)/2;
-    EEPROM.update(address, sensorValue);
-=======
     sensor_value = (sensor1+sensor2)/8;
     EEPROM.write(address, sensor_value);
->>>>>>> b52775bd8c9caf03a0b5b0ede1af6b65d2d111b6
     return true;
   }
 }

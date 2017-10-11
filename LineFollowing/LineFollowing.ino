@@ -32,10 +32,6 @@ int left_speed = 150;
 int right_sensor = 0;
 int left_sensor = 0;
 
-// TABLE VARIABLE
-import processing.serial.*;
-Serial mySerial;
-Table table;
 
 void setup() {
   Serial.begin(9600);
@@ -75,7 +71,7 @@ void set_motor_speeds() {
 
 bool check_sensors() {
 // says whether robot is at track end or not
-  return track_end
+  return track_end;
 }
 
 // calculate and return the PID
@@ -89,7 +85,7 @@ float calculate_PID(error) {
 }
 
 // returns error and changes motor speed according to PID
-float adjust_motors(PID) {
+float adjust_motors(PID){ 
   
   // add PID to one motor and subtract from the other
   right_speed = right_speed + PID;
